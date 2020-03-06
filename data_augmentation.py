@@ -42,3 +42,24 @@ def window_data(X, y, window_size, stride):
         y_new[i*num_sub_trials+k] = y[i]
   return X_new1, X_new2, y_new
 
+def split_even_odd(X):
+  #splits the training data in half by time series
+  time_len = int(X.shape[-1] /2)
+  even = np.arange(time_len)*2
+  odd = np.arange(time_len)*2 +1
+  #print(odd[(time_len-1):time_len])
+  X_train_even = X[:,:,even]
+  X_train_odd = X[:,:,odd]
+  #print(X_train_even.shape)
+  return X_train_even, X_train_odd
+
+def interp(X, time_len):
+  #Change the number of time points in the data (can be used for X_train and X_test data)
+  old_times = np.linspace(0, 4, num=X.shape[-1])
+  new_times = np.linspace(0, 4, num=time_len)
+  X_new = np.empty([X.shape[0],X.shape[1],time_len])
+  for i in range(X.shape[0]):
+    for j in range(X.shape[1]):
+      X_new[i,j,:] = np.interp(new_times, old_times, X[i,j,:])
+  return X_new
+
