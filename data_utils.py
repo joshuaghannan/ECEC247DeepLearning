@@ -52,6 +52,9 @@ class EEG_Dataset(Dataset):
 Data Augmentions
 
 '''
+def standardize(X, mu, std):
+    return (X - mu / std)
+
 
 def window_data(X, y, p, window_size, stride):
   '''
