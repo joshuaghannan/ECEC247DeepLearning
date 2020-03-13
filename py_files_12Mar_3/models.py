@@ -216,7 +216,7 @@ class CNN2LSTM(nn.Module):
     
     '''
     def __init__(self, cnn1_input_size, rnn1_input_size, hidden_size1, rnn2_input_size, hidden_size2, output_dim, dropout):
-        super(CNNLSTMnet, self).__init__()
+        super(CNN2LSTM, self).__init__()
         self.cnn1_input_size = cnn1_input_size
         self.rnn1_input_size = rnn1_input_size
         self.rnn2_input_size = rnn2_input_size

@@ -13,7 +13,8 @@ else:
     device = torch.device("cpu")
     print("GPU not available, CPU used")
 
-def InitRNN(rnn_type="LSTM", input_size=22, rnn_input_size=40, hidden_size=50, output_dim=4, dropout=0.5, lr=1e-3, weight_decay=1e-4):
+
+def InitRNN(rnn_type="LSTM", input_size=22, rnn_input_size=40, hidden_size=50, rnn2_input_size=25, hidden_size2=20, output_dim=4, dropout=0.5, lr=1e-3, weight_decay=1e-4):
     '''
     Function to initialize RNN
     
@@ -51,6 +52,9 @@ def InitRNN(rnn_type="LSTM", input_size=22, rnn_input_size=40, hidden_size=50, o
 
     elif rnn_type=="CNNGRUnet":
         model = CNNGRUnet(cnn_input_size=input_size, rnn_input_size=rnn_input_size, hidden_size=hidden_size, output_dim=output_dim, dropout=dropout).to(device)
+
+    elif rnn_type=="CNN2LSTM":
+        model = CNN2LSTM(cnn1_input_size=input_size, rnn1_input_size=rnn_input_size, hidden_size1=hidden_size, rnn2_input_size=rnn2_input_size, hidden_size2=hidden_size2, output_dim=output_dim, dropout=dropout).to(device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
