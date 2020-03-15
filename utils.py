@@ -6,7 +6,7 @@ from data_utils import *
 
 is_cuda = torch.cuda.is_available()
 if is_cuda:
-    device = torch.device("cuda:1")
+    device = torch.device("cuda")
     print("GPU is available")
 else:
     device = torch.device("cpu")
@@ -70,10 +70,12 @@ def TrainValRNN(model, criterion, optimizer, trainloader, valloader=None, num_ep
         '''
         if aug_type == 'window':
             correct, total = 0, 0
+            sub_correct, sub_total = 0, 0
             for idx, batch in enumerate(valloader):
                 #X = batch['X'].permute(2, 0, 1).to(device)
                 X = batch['X'].to(device)
                 y = batch['y'].to(device)
+                p = batch['p']
                 vote_idx = np.random.choice(1000-window_size, vote_num)
                 vote_pred = np.zeros(y.shape[0])
                 for i in range(len(vote_idx)):
@@ -89,34 +91,54 @@ def TrainValRNN(model, criterion, optimizer, trainloader, valloader=None, num_ep
                 vote_pred = torch.from_numpy(vote_pred).long()
                 correct += torch.sum(vote_pred == y.cpu()).item()
                 total += y.shape[0]
-            val_acc = correct / total        
+                # calculate the acc for subject 1 
+                for j in range(vote_pred.size(0)):
+                    if p[j].item() == 0:
+                        sub_total += 1
+                        if vote_pred[j].item() == y.cpu()[j].item():
+                            sub_correct += 1
+            val_acc = correct / total       
+            sub_val_acc = sub_correct / sub_total
         else:
             correct, total = 0, 0
+            sub_correct, sub_total = 0, 0
             for idx, batch in enumerate(valloader):
                 X = batch['X'].to(device)
                 y = batch['y'].to(device)
+                p = batch['p']
                 output = model(X)                    
                 pred = torch.argmax(output, dim=1)
-                correct += torch.sum(pred == y.cpu()).item()
+                correct += torch.sum(pred.cpu() == y.cpu()).item()
                 total += y.shape[0]
+                for j in range(pred.size(0)):
+                    if p[j].item == 0:
+                        sub_total += 1
+                        if pred.cpu()[j].item() == y.cpu()[j].item():
+                            sub_correct += 1
             val_acc = correct / total
+            if sub_total == 0:
+                sub_val_acc == 0
+            sub_val_acc = sub_correct / sub_total
+
         tend = time.time()
         if verbose:
-            print('epoch: {:<3d}    time: {:<3.2f}    loss: {:<3.3f}    train acc: {:<1.3f}    val acc: {:<1.3f}'.format(ep+1, tend - tstart, train_loss, train_acc, val_acc))
+            print('epoch: {:<3d}    time: {:<3.2f}    loss: {:<3.3f}    train acc: {:<1.3f}    val acc: {:<1.3f}   sub val acc: {:<1.3f}'.format(ep+1, tend - tstart, train_loss, train_acc, val_acc, sub_val_acc))
         if val_acc >= best_val_acc:
             best_val_acc = val_acc
             best_model = model
             print ('saving best model...')
     return best_model
 
-def TestRNN(model, X_test, y_test, p_test, aug_type=None, window_size=None, vote_num=None):
+def TestRNN(model, X_test, y_test, p_test, aug_type=None, window_size=None, vote_num=None, sub_only=False):
     if aug_type == 'window':
-        EEG_testset = EEG_Dataset(X_test=X_test, y_test=y_test, p_test=p_test, mode='test')
+        EEG_testset = EEG_Dataset(X_test=X_test, y_test=y_test, p_test=p_test, mode='test', sub_only=sub_only)
         EEG_testloader = DataLoader(EEG_testset, batch_size=128, shuffle=False)
         correct, total = 0, 0
+        sub_correct, sub_total = 0, 0
         for idx, batch in enumerate(EEG_testloader):
             X = batch['X'].to(device)
             y = batch['y'].to(device)
+            p = batch['p']
             vote_idx = np.random.choice(1000-window_size, vote_num)
             vote_pred = np.zeros(y.shape[0])
             for i in range(len(vote_idx)):
@@ -132,17 +154,30 @@ def TestRNN(model, X_test, y_test, p_test, aug_type=None, window_size=None, vote
             vote_pred = torch.from_numpy(vote_pred).long()
             correct += torch.sum(vote_pred == y.cpu()).item()
             total += y.shape[0]
-        test_acc = correct / total 
+            for j in range(vote_pred.size(0)):
+                if p[j].item() == 0:
+                    sub_total += 1
+                    if vote_pred[j].item() == y.cpu()[j].item():
+                        sub_correct += 1
+        test_acc = correct / total
+        sub_test_acc = sub_correct / sub_total 
     else:
         X_test, y_test, p_test = Aug_Data(X_test, y_test, p_test, aug_type=aug_type)
-        EEG_testset = EEG_Dataset(X_test=X_test, y_test=y_test, p_test=p_test, mode='test')
+        EEG_testset = EEG_Dataset(X_test=X_test, y_test=y_test, p_test=p_test, mode='test', sub_only=sub_only)
         EEG_testloader = DataLoader(EEG_testset, batch_size=128, shuffle=False)
         for idx, batch in enumerate(EEG_testloader):
             X = batch['X'].to(device)
             y = batch['y'].to(device)
             output = model(X)                    
             pred = torch.argmax(output, dim=1)
-            correct += torch.sum(pred == y.cpu()).item()
+            correct += torch.sum(pred.cpu() == y.cpu()).item()
             total += y.shape[0]
+            for j in range(pred.size(0)):
+                if p[j].item() == 0:
+                    sub_total += 1
+                    if pred.cpu()[j].item() == y.cpu()[j].item():
+                        sub_correct += 1
         test_acc = correct / total
-    print ('Testing Accuracy: {:.4f}'.format(test_acc))
+        sub_test_acc = sub_correct / sub_total 
+
+    print ('test acc: {:.4f}  sub test acc: {:.4f}'.format(test_acc, sub_test_acc))

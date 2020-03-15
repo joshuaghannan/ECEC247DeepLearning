@@ -13,7 +13,28 @@ class EEG_Dataset(Dataset):
     use use fold_idx to instantiate different train val datasets for k-fold cross validation
 
     '''
-    def __init__ (self, X_train=None, y_train=None, p_train=None, X_val=None, y_val=None, p_val=None, X_test=None, y_test=None, p_test=None, mode='train'):
+    def __init__ (self, X_train=None, y_train=None, p_train=None, X_val=None, y_val=None, p_val=None, X_test=None, y_test=None, p_test=None, mode='train', sub_only=False):
+        p_train = np.squeeze(p_train)
+        p_val = np.squeeze(p_val)
+        p_test = np.squeeze(p_test)
+
+        if sub_only:
+            if mode == 'train':
+                sub_train_idx = np.where(p_train==0)[0]
+                X_train = X_train[sub_train_idx,:,:]
+                y_train = y_train[sub_train_idx]
+                p_train = p_train[sub_train_idx]
+            elif mode == 'val':
+                sub_val_idx = np.where(p_val==0)[0]
+                X_val = X_val[sub_val_idx,:,:]
+                y_val = y_val[sub_val_idx]
+                p_val = p_val[sub_val_idx]
+            elif mode == 'test':
+                sub_test_idx = np.where(p_test==0)[0]
+                X_test = X_test[sub_test_idx,:,:]
+                y_test = y_test[sub_test_idx]
+                p_test = p_test[sub_test_idx]
+
         if mode == 'train':
             self.X = X_train
             self.y = y_train- 769
