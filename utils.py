@@ -34,6 +34,9 @@ def InitRNN(rnn_type="LSTM", input_size=22, rnn_input_size=40, hidden_size=50, o
 
     elif rnn_type=="CNNGRU":
         model = CNNGRUnet(cnn_input_size=input_size, rnn_input_size=rnn_input_size, hidden_size=hidden_size, output_dim=output_dim, dropout=dropout).to(device)
+    
+    elif rnn_type=="CNN2GRU":
+        model = CNN2GRUnet(hidden_size=hidden_size, output_dim=output_dim, dropout=dropout).to(device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -111,13 +114,11 @@ def TrainValRNN(model, criterion, optimizer, trainloader, valloader=None, num_ep
                 correct += torch.sum(pred.cpu() == y.cpu()).item()
                 total += y.shape[0]
                 for j in range(pred.size(0)):
-                    if p[j].item == 0:
+                    if p[j].item() == 0:
                         sub_total += 1
                         if pred.cpu()[j].item() == y.cpu()[j].item():
                             sub_correct += 1
             val_acc = correct / total
-            if sub_total == 0:
-                sub_val_acc == 0
             sub_val_acc = sub_correct / sub_total
 
         tend = time.time()
@@ -142,7 +143,7 @@ def TestRNN(model, X_test, y_test, p_test, aug_type=None, window_size=None, vote
             vote_idx = np.random.choice(1000-window_size, vote_num)
             vote_pred = np.zeros(y.shape[0])
             for i in range(len(vote_idx)):
-                X_sub = X[:,:,vote_idx[i]:vote_idx[i]+200]
+                X_sub = X[:,:,vote_idx[i]:vote_idx[i]+window_size]
                 output = model(X_sub)
                 pred = torch.argmax(output, dim=1)
                 if i == 0:
@@ -165,9 +166,12 @@ def TestRNN(model, X_test, y_test, p_test, aug_type=None, window_size=None, vote
         X_test, y_test, p_test = Aug_Data(X_test, y_test, p_test, aug_type=aug_type)
         EEG_testset = EEG_Dataset(X_test=X_test, y_test=y_test, p_test=p_test, mode='test', sub_only=sub_only)
         EEG_testloader = DataLoader(EEG_testset, batch_size=128, shuffle=False)
+        correct, total = 0, 0
+        sub_correct, sub_total = 0, 0
         for idx, batch in enumerate(EEG_testloader):
             X = batch['X'].to(device)
             y = batch['y'].to(device)
+            p = batch['p']
             output = model(X)                    
             pred = torch.argmax(output, dim=1)
             correct += torch.sum(pred.cpu() == y.cpu()).item()
@@ -181,3 +185,4 @@ def TestRNN(model, X_test, y_test, p_test, aug_type=None, window_size=None, vote
         sub_test_acc = sub_correct / sub_total 
 
     print ('test acc: {:.4f}  sub test acc: {:.4f}'.format(test_acc, sub_test_acc))
+    return test_acc, sub_test_acc

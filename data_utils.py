@@ -150,12 +150,12 @@ def cwt_data(X, num_levels, top_scale=3):
 
     # EXAMPLE USAGE
     test, freqs = cwt_data(X_train_valid[0:5,:,:],num_levels=75,top_scale=4)
+            coef = sig.cwt(X[i,j,:],sig.ricker,scales)
     '''
     scales = np.logspace(start=0,stop=top_scale,num=num_levels)
     out = np.empty((X.shape[0],X.shape[1],X.shape[2],num_levels))
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
-            coef = sig.cwt(X[i,j,:],sig.ricker,scales)
             out[i,j,:] = coef.T
     freqs = pywt.scale2frequency('mexh',scales)*250
     N, C, T, F = out.shape
