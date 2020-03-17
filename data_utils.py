@@ -53,6 +53,20 @@ def standardize(X, mu, std):
     return (X - mu / std)
 
 
+# Perform a Ms. Butterworth bandpass filter with the low and high frequencies specified
+def bandpass_filter(X,low,high):
+  N, C, T = X.shape
+  out = np.zeros_like(X)
+  nyq = 125 #nyquist frequency, highest able to be sensed for this data
+  if high > nyq :
+    high = nyq
+  order = 9
+
+  b, a = sig.butter(order, [low/nyq,high/nyq], btype='band')
+  out = sig.lfilter(b, a, X, axis=-1)
+
+  return out
+
 def window_data(X, y, p, window_size, stride):
   '''
   X (a 3-d tensor) of size (#trials, #electrodes, #time series)
@@ -161,6 +175,17 @@ def cwt_data2(X, y, p, num_levels, top_scale=3):
         p_cwt[i*F+k] = p[i]
     return X_cwt, y_cwt, p_cwt
 
+def dwt_data(X,wav_name):
+    wav = pywt.Wavelet(wav_name)
+    n = X.shape[-1] #extract length of timeseries
+    max_level = pywt.dwt_max_level(n,wav)
+    out1 = np.concatenate(pywt.wavedec(X[0,:,:],wav,level=max_level,mode='zero'),axis=1)
+    out = np.empty((X.shape[0],X.shape[1],out1.shape[1]))
+    out[0,:,:] = out1
+    for i in range(1,X.shape[0]):
+        out[i,:,:] = np.concatenate(pywt.wavedec(X[i,:,:],wav,level=max_level,mode='zero'),axis=1)
+    return out
+
 def Aug_Data(X, y, p, aug_type=None, window_size=200, window_stride=20, stft_size=None, stft_stride=None, cwt_level=None, cwt_scale=None):
     if aug_type == None:
         X_aug, y_aug, p_aug = X, y, p
@@ -174,8 +199,10 @@ def Aug_Data(X, y, p, aug_type=None, window_size=200, window_stride=20, stft_siz
         y_aug, p_aug = y, p
     elif aug_type == "cwt2":
         X_aug,y_aug,p_aug = cwt_data2(X, y, p, cwt_level, cwt_scale)
+    elif aug_type == "dwt":
+        X_aug = dwt_data(X,'sym9')
+        y_aug, p_aug = y, p
     return X_aug, y_aug, p_aug
-
 '''
 Split training and validation
 '''

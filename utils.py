@@ -6,7 +6,7 @@ from data_utils import *
 
 is_cuda = torch.cuda.is_available()
 if is_cuda:
-    device = torch.device("cuda")
+    device = torch.device("cuda:0")
     # device = torch.device("cuda:1") # For Yiming 
     print("GPU is available")
 else:
@@ -116,7 +116,7 @@ def TrainValRNN(model, criterion, optimizer, trainloader, valloader=None, num_ep
                 y = batch['y'].to(device)
                 output = model(X)                    
                 pred = torch.argmax(output, dim=1)
-                correct += torch.sum(pred == y.cpu()).item()
+                correct += torch.sum(pred == y.cuda()).item()
                 total += y.shape[0]
             val_acc = correct / total
         tend = time.time()
@@ -128,7 +128,7 @@ def TrainValRNN(model, criterion, optimizer, trainloader, valloader=None, num_ep
             print ('saving best model...')
     return best_model
 
-def TestRNN(model, X_test, y_test, p_test, aug_type=None, window_size=None, vote_num=None):
+def TestRNN(model, X_test, y_test, p_test, aug_type=None, window_size=None, vote_num=None,window_stride=None,stft_size=None,stft_stride=None,cwt_level=None,cwt_scale=None):
     if aug_type == 'window':
         EEG_testset = EEG_Dataset(X_test=X_test, y_test=y_test, p_test=p_test, mode='test')
         EEG_testloader = DataLoader(EEG_testset, batch_size=128, shuffle=False)
@@ -153,15 +153,17 @@ def TestRNN(model, X_test, y_test, p_test, aug_type=None, window_size=None, vote
             total += y.shape[0]
         test_acc = correct / total 
     else:
-        X_test, y_test, p_test = Aug_Data(X_test, y_test, p_test, aug_type=aug_type)
+        X_test, y_test, p_test = Aug_Data(X_test, y_test, p_test, aug_type=aug_type,stft_size=stft_size,stft_stride=stft_stride,cwt_level=cwt_level,cwt_scale=cwt_scale)
         EEG_testset = EEG_Dataset(X_test=X_test, y_test=y_test, p_test=p_test, mode='test')
         EEG_testloader = DataLoader(EEG_testset, batch_size=128, shuffle=False)
+        total, correct = 0, 0
         for idx, batch in enumerate(EEG_testloader):
             X = batch['X'].to(device)
             y = batch['y'].to(device)
             output = model(X)                    
             pred = torch.argmax(output, dim=1)
-            correct += torch.sum(pred == y.cpu()).item()
+            correct += torch.sum(pred == y.cuda()).item()
             total += y.shape[0]
         test_acc = correct / total
     print ('Testing Accuracy: {:.4f}'.format(test_acc))
+    return test_acc
