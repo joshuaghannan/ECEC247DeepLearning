@@ -30,5 +30,4 @@ In order to run the project, perform the following steps:
 7. `final_version/utils.py`: File that contains the training and testing functions
 8. 'C247_Final_Report.pdf': Final project report
 9. 'requirements.txt': Project package requirements
-10. 'project_guidelines.pdf': ECE C247 Project guidelines
 
